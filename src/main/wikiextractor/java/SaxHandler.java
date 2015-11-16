@@ -1,5 +1,4 @@
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -19,7 +18,7 @@ public class SaxHandler extends DefaultHandler {
     private Page page;
     private boolean pageStarted;
     private final Stack<String> elementStack = new Stack<>();
-    private final String OUTPUT_DIR;
+    private final AppProperties props;
 
     /*
      * siteinfo detils
@@ -33,13 +32,19 @@ public class SaxHandler extends DefaultHandler {
     /*
      * Threads details for parallel processing
      */
-    private final int MAX_WORKERS = 3;
+    private final int MAX_WORKERS;
     private SaxHandlerWorker[] workers;
     private int current = 0;
+    /*
+     * count total  articles processed in order to stop the parser if needd
+     */
+    int totalArticlesToBeProcessed;
 
-    public SaxHandler(String outputDir) {
+    public SaxHandler(AppProperties props) {
         this.knownNamespaces = new ArrayList<>();
-        this.OUTPUT_DIR = outputDir;
+        this.props = props;
+        MAX_WORKERS = Integer.parseInt(props.getProperty(Property.WORKERS));
+        totalArticlesToBeProcessed = Integer.parseInt(props.getProperty(Property.ARTICLES));
     }
 
     @Override
@@ -72,7 +77,22 @@ public class SaxHandler extends DefaultHandler {
             //add page into one of worker queue
             workers[current++].add(page);
             current = current % MAX_WORKERS;
-
+            totalArticlesToBeProcessed--;
+            /*
+             * Checked remaining articles to be processed. if it is zero,
+             * stop the parser by throwing exception. Unfortunately, there is no
+             * other way to do so (!)
+             */
+            if (totalArticlesToBeProcessed < 1) {
+                /*
+                 *stop workers first
+                 */
+                stopWorkers();
+                /*
+                 * Throw exception
+                 */
+                throw new SAXStopException("Parser finished with reading required documents.");
+            }
         }
     }
 
@@ -96,7 +116,7 @@ public class SaxHandler extends DefaultHandler {
                 this.page.setText(value);
             }
         } else {
-            //read siteinfo 
+            //read siteinfo
             if ("sitename".equals(currentElement())) {
                 this.siteName = value;
             } else if ("base".equals(currentElement())) {
@@ -113,10 +133,16 @@ public class SaxHandler extends DefaultHandler {
         }
     }
 
+    /*
+     * Get current element being processed
+     */
     private String currentElement() {
         return this.elementStack.peek();
     }
 
+    /*
+     * Get parent of current element being processed
+     */
     private String currentElementParent() {
         if (this.elementStack.size() < 2) {
             return "";
@@ -124,15 +150,21 @@ public class SaxHandler extends DefaultHandler {
         return this.elementStack.get(this.elementStack.size() - 2);
     }
 
+    /*
+     * Start all workers to handle the pages parallely.
+     */
     public void startWorkers() {
         log.info("Sax Handler workers are initializing ....");
         this.workers = new SaxHandlerWorker[MAX_WORKERS];
         for (int i = 0; i < MAX_WORKERS; i++) {
-            this.workers[i] = new SaxHandlerWorker(this, i + 1, OUTPUT_DIR);
+            this.workers[i] = new SaxHandlerWorker(this, i + 1, props.getProperty(Property.OUTPUT_DIR));
             this.workers[i].start();
         }
     }
 
+    /*
+     * Stop all workers when done
+     */
     public void stopWorkers() {
         log.info("Sax Handler workers are stopping...");
         for (int i = 0; i < MAX_WORKERS; i++) {
@@ -143,6 +175,7 @@ public class SaxHandler extends DefaultHandler {
     /*
      * Getter methods - make them synchronized to avoid race conditions
      */
+
     public synchronized String getSiteName() {
         return siteName;
     }

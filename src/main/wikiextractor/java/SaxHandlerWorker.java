@@ -64,7 +64,7 @@ public class SaxHandlerWorker extends Thread {
                 }
                 try {
                     //print content
-                    log.log(Level.INFO, item.toString());
+//                    log.log(Level.INFO, item.toString());
                     //save contents into file
                     File output = new File(OUTPUT_DIR + "/" + item.getId() + ".txt");
                     FileWriter fileWriter = new FileWriter(output.getAbsoluteFile());
