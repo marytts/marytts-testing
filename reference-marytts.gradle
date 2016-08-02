@@ -101,3 +101,11 @@ project(':reference-marytts:marytts-signalproc') {
         testCompile 'junit:junit:4.11'
     }
 }
+
+project(':reference-marytts:voice-cmu-slt-hsmm') {
+    dependencies {
+        compile project(':reference-marytts:marytts-common')
+        compile project(':reference-marytts:marytts-runtime')
+        compile project(':reference-marytts:marytts-languages:marytts-lang-en')
+    }
+}
