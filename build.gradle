@@ -122,6 +122,7 @@ subprojects.findAll { it.name ==~ /(reference|bleeding)/ }.each { proj ->
 
     proj.ext {
         xmlDir = file("$proj.buildDir/xml")
+        wavDir = file("$proj.buildDir/wav")
     }
 
     proj.dependencies {
@@ -153,8 +154,32 @@ subprojects.findAll { it.name ==~ /(reference|bleeding)/ }.each { proj ->
             }
         }
     }
+
+    proj.task('convertTextToAudio') {
+        dependsOn proj.classes
+        inputs.files proj.parent.splitIntoArticles
+        outputs.dir proj.xmlDir
+        doFirst {
+            proj.wavDir.mkdirs()
+        }
+        doLast {
+            javaexec {
+                main 'Text2Audio'
+                classpath proj.sourceSets.main.runtimeClasspath
+                args proj.parent.name, proj.parent.textDir, proj.wavDir
+                workingDir proj.buildDir
+                systemProperties << ['log4j.logging.marytts': 'INFO,stderr']
+            }
+        }
+    }
+}
+
+project(':en').subprojects { proj ->
+    proj.dependencies {
+        compile project(":$proj.name-marytts:voice-cmu-slt-hsmm")
+    }
 }
 
 subprojects.findAll { it.name.length() == 2 }.each { proj ->
-    proj.test.dependsOn proj.subprojects.collect { it.convertTextToPhonemes }
+    proj.test.dependsOn proj.subprojects.collect { it.convertTextToAudio }
 }
