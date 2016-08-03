@@ -24,7 +24,7 @@ project(':bleeding-marytts:marytts-common') {
         compile 'commons-lang:commons-lang:2.6'
         compile 'commons-io:commons-io:2.0.1'
         compile 'log4j:log4j:1.2.16'
-        compile 'org.codehaus.groovy:groovy-all:2.3.10'
+        compile 'org.codehaus.groovy:groovy-all:2.4.4'
         compile group: 'org.hsqldb', name: 'hsqldb', version: '2.3.4'
         testCompile 'junit:junit:4.11'
         testCompile 'org.testng:testng:6.8.13'
